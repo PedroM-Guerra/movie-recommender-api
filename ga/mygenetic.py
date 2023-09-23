@@ -4,7 +4,8 @@ from ga.algorithm import Algorithm
 from sqlalchemy.orm import Session
 from fastapi import Depends
 import numpy as np
-import math 
+import math
+from collections import Counter
 
 from db.database import get_db
 from db.repositories import UserRepository, MovieRepository, RatingsRepository
@@ -30,7 +31,8 @@ class MyGeneticAlgorithm(Algorithm):
         self.query_search = query_search
         
 
-    
+    # O individual é formado por uma lista de IDs dos filmes
+
     def evaluate(self, individual):
 
         if len(individual) != len(set(individual)):
@@ -39,7 +41,28 @@ class MyGeneticAlgorithm(Algorithm):
         if len(list(set(individual) - set(self.all_ids))) > 0:
             return (0.0, )
         
+        # Lista dos objetos dos filmes
+        movies = MovieRepository.find_all_ids(self.db, individual)
+
+        # Dados filmes na lista individual
         ratings_movies = RatingsRepository.find_by_movieid_list(self.db, individual)
+        genres_movies = list(set(genre for movie in movies for genre in movie.genres.split('|')))
+
+        # User data
+        rated_movies = RatingsRepository.find_by_userid(self.db, 1)
+
+        least_liked_genres_list = [genre for m in rated_movies if m.rating <= 2 for genre in m.movie.genres.split('|')]
+        most_liked_genres_list = [genre for m in rated_movies if m.rating >= 4 for genre in m.movie.genres.split('|')]
+
+        l_genre_counts = Counter(least_liked_genres_list)
+        m_genre_counts = Counter(most_liked_genres_list)
+
+        top_ll_genres = l_genre_counts.most_common(3)
+        top_ml_genres = m_genre_counts.most_common(3)
+
+        least_liked_genres_list = [genre for genre, count in top_ll_genres]
+        most_liked_genres_list = [genre for genre, count in top_ml_genres]
+
 
         if len(ratings_movies) > 0:
             mean_ = np.mean([obj_.rating for obj_ in ratings_movies])
