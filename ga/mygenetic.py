@@ -30,9 +30,6 @@ class MyGeneticAlgorithm(Algorithm):
         self.all_ids = all_ids
         self.query_search = query_search
         
-
-    # O individual é formado por uma lista de IDs dos filmes
-
     def evaluate(self, individual):
 
         if len(individual) != len(set(individual)):
@@ -43,7 +40,6 @@ class MyGeneticAlgorithm(Algorithm):
 
         # Dados filmes na lista individual
         ratings_movies = RatingsRepository.find_by_movieid_list(self.db, individual)
-        genres_movies = list(set(genre for movie in movies for genre in movie.genres.split('|')))
 
         # User data
         rated_movies = RatingsRepository.find_by_userid(self.db, 1)
