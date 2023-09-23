@@ -40,9 +40,6 @@ class MyGeneticAlgorithm(Algorithm):
         
         if len(list(set(individual) - set(self.all_ids))) > 0:
             return (0.0, )
-        
-        # Lista dos objetos dos filmes
-        movies = MovieRepository.find_all_ids(self.db, individual)
 
         # Dados filmes na lista individual
         ratings_movies = RatingsRepository.find_by_movieid_list(self.db, individual)
@@ -50,6 +47,7 @@ class MyGeneticAlgorithm(Algorithm):
 
         # User data
         rated_movies = RatingsRepository.find_by_userid(self.db, 1)
+        watched_movies = [movie.movie.movieId for movie in rated_movies] # Watched movies IDs
 
         least_liked_genres_list = [genre for m in rated_movies if m.rating <= 2 for genre in m.movie.genres.split('|')]
         most_liked_genres_list = [genre for m in rated_movies if m.rating >= 4 for genre in m.movie.genres.split('|')]
@@ -63,11 +61,29 @@ class MyGeneticAlgorithm(Algorithm):
         least_liked_genres_list = [genre for genre, count in top_ll_genres]
         most_liked_genres_list = [genre for genre, count in top_ml_genres]
 
+        points = []
+        
+        for title in individual:
+            current_title = MovieRepository.find_by_id(self.db, title)
+            
+            if title in watched_movies:
+                if set(current_title.genres.split('|')).intersection(set(least_liked_genres_list)):
+                    points.append(-10)
+                elif set(current_title.genres.split('|')).intersection(set(most_liked_genres_list)):
+                    points.append(70)
+                else:
+                    points.append(60)
+            else:
+                if set(current_title.genres.split('|')).intersection(set(least_liked_genres_list)):
+                    points.append(0)
+                elif set(current_title.genres.split('|')).intersection(set(most_liked_genres_list)):
+                    points.append(100)
+                else:
+                    points.append(70)
 
         if len(ratings_movies) > 0:
-            mean_ = np.mean([obj_.rating for obj_ in ratings_movies])
+            score = sum(points)
         else:
-            mean_ = 0.0
+            score = 0.0
 
-        return (mean_, )
-
+        return (score, )
